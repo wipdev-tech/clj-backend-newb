@@ -1,18 +1,27 @@
 (ns backend.core
   (:require [ring-jetty.adapter.jetty :refer [run-jetty]]
-            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.util.response :refer [content-type response]]
-            [cheshire.core :refer [generate-string]]))
+            [cheshire.core :refer [generate-string]]
+            [reitit.ring :as ring]))
 
-;; basic handler: req (map) => response (map)
+(defn now [] (new java.util.Date))
+
 (defn handler [request]
-  (-> {:greeting (:g (:params request) "unknown")}
+  (prn request)
+  (-> {:message (str "Hello "
+                     (:name (:params request) "world")
+                     "! You've successfully accessed the API!")
+       :at       (now)}
       generate-string
       response
       (content-type "application/json")))
 
-(def app (-> #'handler
+(def router
+  (ring/router ["/ping" {:get #(handler %)}]))
+
+(def app (-> #((ring/ring-handler router) %)
              wrap-keyword-params
              wrap-params))
 
@@ -20,7 +29,7 @@
 
 (defn -main []
   (reset! server
-          (run-jetty #'app {:port 8000
+          (run-jetty #'app {:port 8080
                             :join? false})))
 
 #_(-main)
