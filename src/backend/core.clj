@@ -2,26 +2,17 @@
   (:require [ring-jetty.adapter.jetty :refer [run-jetty]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
-            [clojure.pprint :refer [pprint]]))
+            [ring.util.response :refer [content-type response]]
+            [cheshire.core :refer [generate-string]]))
 
 ;; basic handler: req (map) => response (map)
 (defn handler [request]
-  {:status 200
-   :headers {"Content-Type" "text/html"}
-   :body  (str
-           "<pre>"
-           (with-out-str (pprint request))
-           "</pre>")})
+  (-> {:greeting (:g (:params request) "unknown")}
+      generate-string
+      response
+      (content-type "application/json")))
 
-;; middleware produces functions that wrap the original handler
-(defn wrap-content-type [handler content-type]
-  (fn [request]
-    (assoc-in (handler request)
-              [:headers "Content-Type"]
-              content-type)))
-
-(def app (-> handler
-             (wrap-content-type "text/plain")
+(def app (-> #'handler
              wrap-keyword-params
              wrap-params))
 
